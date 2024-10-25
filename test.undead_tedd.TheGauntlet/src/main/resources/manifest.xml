@@ -1,0 +1,10 @@
+<bot>
+    <name>The Gauntlet Bot</name>
+    <version>1.0</version>
+    <description>Automates tasks within The Gauntlet minigame</description>
+    <author>undead_tedd</author>
+    <category>Combat</category>
+    <script>fighter.DungeonCrawler</script> <!-- Corrected class reference -->
+    <game>OSRS</game>
+    <mode>Hybrid</mode>
+</bot>
