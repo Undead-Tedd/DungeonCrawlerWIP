@@ -19,6 +19,8 @@ import lombok.extern.log4j.Log4j2;
 
 import java.awt.event.KeyEvent;
 
+import static fighter.tasks.tracking.ResourceTracker.isNeededResource;
+
 @Log4j2
 public class DungeonUtils {
 
@@ -518,14 +520,6 @@ public class DungeonUtils {
         return 0;
     }
 
-    public static int getBowstringCount(String type) {
-        if (type.equals("corrupted")) {
-            return getResourceTracker().getCorruptedBowstringCount();
-        } else if (type.equals("crystalline")) {
-            return getResourceTracker().getCrystallineBowstringCount();
-        }
-        return 0;
-    }
     public static GameObject getNeededResourceNode() {
         // Query resource nodes based on their names
         return GameObjects.newQuery().names(
@@ -545,38 +539,6 @@ public class DungeonUtils {
 
         public static ResourceTracker getResourceTracker() {
             // Logic to get the resource tracker
-        }
-    }
-    public static boolean isNeededResource(String resourceName) {
-        switch (resourceName) {
-            case "Grym Leaf":
-                return getResourceTracker().getGrymLeafCount() < 3;
-            case "Crystal Ore":
-                return getResourceTracker().getCrystalOreCount() < 3;
-            case "Phren Bark":
-                return getResourceTracker().getPhrenBarkCount() < 3;
-            case "Linum Tirinium":
-                return getResourceTracker().getLinumTiriniumCount() < 3;
-            case "Corrupted Shards":
-                return getResourceTracker().getCorruptedShards() < 380;
-            case "Crystalline Shards":
-                return getResourceTracker().getCrystallineShards() < 380;
-            case "Corrupted Orb":
-                return getResourceTracker().getCorruptedOrbCount() < 1;
-            case "Crystalline Orb":
-                return getResourceTracker().getCrystallineOrbCount() < 1;
-            case "Corrupted Bowstring":
-                return getResourceTracker().getCorruptedBowstringCount() < 1;
-            case "Crystalline Bowstring":
-                return getResourceTracker().getCrystallineBowstringCount() < 1;
-            case "Weapon Frame":
-                return getResourceTracker().getWeaponFrameCount() < 2;
-            case "Corrupted Dust":
-                return getResourceTracker().getCorruptedDustCount() < 30;
-            case "Crystalline Dust":
-                return getResourceTracker().getCrystallineDustCount() < 30;
-            default:
-                return false;
         }
     }
 
@@ -634,23 +596,6 @@ public class DungeonUtils {
         } else {
             log.info(currentTier + " Staff is already crafted.");
         }
-    }
-
-    // Reset crafting progress for a new run
-    public static void resetCraftingProgress() {
-        getResourceTracker().resetCraftedItems();
-    }
-
-    public static boolean isReadyForFirstCraft() {
-        return getResourceTracker().getCrystallineShards() >= 150 &&
-                getResourceTracker().getWeaponFrameCount() >= 2;
-    }
-
-    public static boolean isReadyForSecondCraft() {
-        return getResourceTracker().getCrystallineShards() >= 380 &&
-                // Add any other specific resources for second craft
-                getResourceTracker().getLinumTiriniumCount() >= 1 &&
-                getResourceTracker().getPhrenBarkCount() >= 1;
     }
 
     public static boolean allRequiredMonstersSlain() {

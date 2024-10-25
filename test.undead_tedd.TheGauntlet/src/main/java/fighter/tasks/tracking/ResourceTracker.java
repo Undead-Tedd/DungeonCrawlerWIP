@@ -50,6 +50,53 @@ public class ResourceTracker {
         return false;
     }
 
+    public static boolean isNeededResource(String resourceName) {
+        switch (resourceName) {
+            case "Grym Leaf":
+                return getResourceTracker().getGrymLeafCount() < 3;
+            case "Crystal Ore":
+                return getResourceTracker().getCrystalOreCount() < 3;
+            case "Phren Bark":
+                return getResourceTracker().getPhrenBarkCount() < 3;
+            case "Linum Tirinium":
+                return getResourceTracker().getLinumTiriniumCount() < 3;
+            case "Corrupted Shards":
+                return getResourceTracker().getCorruptedShards() < 380;
+            case "Crystalline Shards":
+                return getResourceTracker().getCrystallineShards() < 380;
+            case "Corrupted Orb":
+                return getResourceTracker().getCorruptedOrbCount() < 1;
+            case "Crystalline Orb":
+                return getResourceTracker().getCrystallineOrbCount() < 1;
+            case "Corrupted Bowstring":
+                return getResourceTracker().getCorruptedBowstringCount() < 1;
+            case "Crystalline Bowstring":
+                return getResourceTracker().getCrystallineBowstringCount() < 1;
+            case "Weapon Frame":
+                return getResourceTracker().getWeaponFrameCount() < 2;
+            case "Corrupted Dust":
+                return getResourceTracker().getCorruptedDustCount() < 30;
+            case "Crystalline Dust":
+                return getResourceTracker().getCrystallineDustCount() < 30;
+            default:
+                return false;
+        }
+    }
+    // Reset crafting progress for a new run
+    public void resetCraftingProgress() {
+        resetCraftedItems();
+    }
+
+    public boolean isReadyForFirstCraft() {
+        return getCrystallineShards() >= 150 && getWeaponFrameCount() >= 2;
+    }
+
+    public boolean isReadyForSecondCraft() {
+        return getCrystallineShards() >= 380 &&
+                getLinumTiriniumCount() >= 1 && getPhrenBarkCount() >= 1;
+    }
+
+
     // Advance to the next crafting phase
     public void advanceCraftingPhase() {
         if (craftingPhase == 1) {
@@ -343,6 +390,15 @@ public class ResourceTracker {
     public synchronized void setCrystallineDustCount(int count) {
         crystallineDustCount = Math.max(0, count);
         log.info("Set crystalline dust count to {}", crystallineDustCount);
+    }
+
+    public static int getBowstringCount(String type) {
+        if (type.equals("corrupted")) {
+            return getResourceTracker().getCorruptedBowstringCount();
+        } else if (type.equals("crystalline")) {
+            return getResourceTracker().getCrystallineBowstringCount();
+        }
+        return 0;
     }
 
     // Tracking crafted bow tiers
