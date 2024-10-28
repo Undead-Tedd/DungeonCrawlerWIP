@@ -395,29 +395,27 @@ public class DungeonUtils {
         log.info("Querying for barriers...");
         GameObject barrierObject = GameObjects.newQuery().names("Barrier").results().first();
         if (barrierObject != null) {
-            log.info("Found barrier at position: " + barrierObject.getPosition());
+            log.info("Found barrier at position: {}", barrierObject.getPosition());
             Coordinate barrierPosition = barrierObject.getPosition();
 
             // Determine which set of nodes to use based on the UI setting
             boolean isCorrupted = bot.isEnterCorrupted(); // Use the bot's UI setting
+            log.info("Is Corrupted Mode: {}", isCorrupted);
+
+            // Fixed coordinates for barrier detection
+            Coordinate northBarrierCoord1 = new Coordinate(1905, 5688, 1);
+            Coordinate northBarrierCoord2 = new Coordinate(1905, 5687, 1);
+
             Coordinate[] northNodes = isCorrupted ? DungeonUtils.corruptedNorthDoorNodes : DungeonUtils.northDoorNodes;
             Coordinate[] southNodes = isCorrupted ? DungeonUtils.corruptedSouthDoorNodes : DungeonUtils.southDoorNodes;
-            Coordinate[] eastNodes = isCorrupted ? DungeonUtils.corruptedEastDoorNodes : DungeonUtils.eastDoorNodes;
-            Coordinate[] westNodes = isCorrupted ? DungeonUtils.corruptedWestDoorNodes : DungeonUtils.westDoorNodes;
 
-            // Determine direction to turn the camera
-            if (barrierPosition.equals(northNodes[0]) || barrierPosition.equals(northNodes[1])) {
-                log.info("Barrier found on the north side. Turning camera south...");
+            // Check against fixed barrier coordinates and turn the camera accordingly
+            assert barrierPosition != null;
+            if (barrierPosition.equals(northBarrierCoord1) || barrierPosition.equals(northBarrierCoord2)) {
+                log.info("Barrier found at the north position. Turning camera south...");
                 Camera.turnTo(southNodes[0]); // South side
-            } else if (barrierPosition.equals(southNodes[0]) || barrierPosition.equals(southNodes[1])) {
-                log.info("Barrier found on the south side. Turning camera north...");
-                Camera.turnTo(northNodes[0]); // North side
-            } else if (barrierPosition.equals(eastNodes[0]) || barrierPosition.equals(eastNodes[1])) {
-                log.info("Barrier found on the east side. Turning camera west...");
-                Camera.turnTo(westNodes[0]); // West side
-            } else if (barrierPosition.equals(westNodes[0]) || barrierPosition.equals(westNodes[1])) {
-                log.info("Barrier found on the west side. Turning camera east...");
-                Camera.turnTo(eastNodes[0]); // East side
+            } else {
+                log.warn("Barrier position did not match fixed coordinates. Position: {}", barrierPosition);
             }
 
             // Interact with the node after turning the camera
@@ -455,6 +453,8 @@ public class DungeonUtils {
     }
 
 
+
+
     public static Npc getBoss(BossType bossType) {
         // Replace "BossName" with the actual name of the boss NPC.
         return Npcs.newQuery().names("Crystalline Hunllef", "Corrupted Hunllef").results().first();
@@ -489,7 +489,6 @@ public class DungeonUtils {
     }
 
     public static boolean isInventoryFull() {
-        // Assuming a full inventory in OSRS typically has 28 slots
         int maxInventorySize = 28;
         return Inventory.getQuantity() >= maxInventorySize;
     }
