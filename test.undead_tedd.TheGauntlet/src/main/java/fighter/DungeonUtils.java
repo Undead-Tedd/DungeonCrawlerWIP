@@ -1,13 +1,11 @@
 package fighter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import com.runemate.game.api.hybrid.entities.GameObject;
 import com.runemate.game.api.hybrid.entities.GroundItem;
 import com.runemate.game.api.hybrid.entities.Npc;
-import com.runemate.game.api.hybrid.entities.definitions.GameObjectDefinition;
 import com.runemate.game.api.hybrid.input.Keyboard;
+import com.runemate.game.api.hybrid.local.Camera;
 import com.runemate.game.api.hybrid.local.hud.interfaces.*;
 import com.runemate.game.api.hybrid.location.Area;
 import com.runemate.game.api.hybrid.location.Coordinate;
@@ -31,6 +29,29 @@ import static fighter.tasks.tracking.ResourceTracker.isNeededResource;
 
 @Log4j2
 public class DungeonUtils {
+
+    // Coordinates for normal and corrupted mode
+    public static final Coordinate[] northDoorNodes = {new Coordinate(1910, 5678, 1), new Coordinate(1913, 5678, 1)};
+    public static final Coordinate[] eastDoorNodes = {new Coordinate(1918, 5673, 1), new Coordinate(1918, 5670, 1)};
+    public static final Coordinate[] southDoorNodes = {new Coordinate(1913, 5665, 1), new Coordinate(1910, 5665, 1)};
+    public static final Coordinate[] westDoorNodes = {new Coordinate(1905, 5670, 1), new Coordinate(1905, 5673, 1)};
+
+    public static final Coordinate[] corruptedNorthDoorNodes = {new Coordinate(1974, 5678, 1), new Coordinate(1977, 5678, 1)};
+    public static final Coordinate[] corruptedEastDoorNodes = {new Coordinate(1982, 5673, 1), new Coordinate(1982, 5670, 1)};
+    public static final Coordinate[] corruptedSouthDoorNodes = {new Coordinate(1977, 5665, 1), new Coordinate(1974, 5665, 1)};
+    public static final Coordinate[] corruptedWestDoorNodes = {new Coordinate(1969, 5670, 1), new Coordinate(1969, 5673, 1)};
+
+    // Rectangular areas for normal and corrupted mode
+    private static final Area.Rectangular northDoorArea = Area.rectangular(northDoorNodes[0], northDoorNodes[1]);
+    private static final Area.Rectangular eastDoorArea = Area.rectangular(eastDoorNodes[0], eastDoorNodes[1]);
+    private static final Area.Rectangular southDoorArea = Area.rectangular(southDoorNodes[0], southDoorNodes[1]);
+    private static final Area.Rectangular westDoorArea = Area.rectangular(westDoorNodes[0], westDoorNodes[1]);
+
+    private static final Area.Rectangular corruptedNorthDoorArea = Area.rectangular(corruptedNorthDoorNodes[0], corruptedNorthDoorNodes[1]);
+    private static final Area.Rectangular corruptedEastDoorArea = Area.rectangular(corruptedEastDoorNodes[0], corruptedEastDoorNodes[1]);
+    private static final Area.Rectangular corruptedSouthDoorArea = Area.rectangular(corruptedSouthDoorNodes[0], corruptedSouthDoorNodes[1]);
+    private static final Area.Rectangular corruptedWestDoorArea = Area.rectangular(corruptedWestDoorNodes[0], corruptedWestDoorNodes[1]);
+
 
     private static final long FLICK_DELAY = 600; // Flick every 600ms
 
@@ -370,64 +391,68 @@ public class DungeonUtils {
         return null; // Return null if all resources are gathered or no node is found
     }
 
-    private boolean lightNodeAtDoorway(Coordinate[] nodes, String direction) {
-        Area.Rectangular areaAroundNodes = DungeonUtils.nodeAreaAround(nodes, direction);
-        log.info("Checking lightable nodes in area around coordinates: " + Arrays.toString(nodes) + " with direction: " + direction);
+    public static boolean lightNodeAtDoorway(DungeonCrawler bot) {
+        log.info("Querying for barriers...");
+        GameObject barrierObject = GameObjects.newQuery().names("Barrier").results().first();
+        if (barrierObject != null) {
+            log.info("Found barrier at position: " + barrierObject.getPosition());
+            Coordinate barrierPosition = barrierObject.getPosition();
 
-        GameObject nodeObject = GameObjects.newQuery().names("Node").within(areaAroundNodes).results().first();
+            // Determine which set of nodes to use based on the UI setting
+            boolean isCorrupted = bot.isEnterCorrupted(); // Use the bot's UI setting
+            Coordinate[] northNodes = isCorrupted ? DungeonUtils.corruptedNorthDoorNodes : DungeonUtils.northDoorNodes;
+            Coordinate[] southNodes = isCorrupted ? DungeonUtils.corruptedSouthDoorNodes : DungeonUtils.southDoorNodes;
+            Coordinate[] eastNodes = isCorrupted ? DungeonUtils.corruptedEastDoorNodes : DungeonUtils.eastDoorNodes;
+            Coordinate[] westNodes = isCorrupted ? DungeonUtils.corruptedWestDoorNodes : DungeonUtils.westDoorNodes;
 
-        if (nodeObject != null) {
-            GameObjectDefinition def = nodeObject.getDefinition();
-            if (def != null) {
-                log.info("Found node. Actions available: " + String.join(", ", def.getActions()));
-                if (def.getActions() != null && def.getActions().contains("Light")) {
-                    log.info("Found lightable node at position: " + nodeObject.getPosition() + ". Attempting to interact...");
-                    boolean interactionResult = nodeObject.interact("Light");
+            // Determine direction to turn the camera
+            if (barrierPosition.equals(northNodes[0]) || barrierPosition.equals(northNodes[1])) {
+                log.info("Barrier found on the north side. Turning camera south...");
+                Camera.turnTo(southNodes[0]); // South side
+            } else if (barrierPosition.equals(southNodes[0]) || barrierPosition.equals(southNodes[1])) {
+                log.info("Barrier found on the south side. Turning camera north...");
+                Camera.turnTo(northNodes[0]); // North side
+            } else if (barrierPosition.equals(eastNodes[0]) || barrierPosition.equals(eastNodes[1])) {
+                log.info("Barrier found on the east side. Turning camera west...");
+                Camera.turnTo(westNodes[0]); // West side
+            } else if (barrierPosition.equals(westNodes[0]) || barrierPosition.equals(westNodes[1])) {
+                log.info("Barrier found on the west side. Turning camera east...");
+                Camera.turnTo(eastNodes[0]); // East side
+            }
 
-                    if (interactionResult) {
-                        log.info("Node successfully lit.");
-                        Execution.delay(3000, 8000); // Ensure interaction completes
+            // Interact with the node after turning the camera
+            GameObject nodeObject = GameObjects.newQuery().names("Node").actions("Light").results().first();
+            if (nodeObject != null) {
+                log.info("Found lightable node at position: " + nodeObject.getPosition() + ". Attempting to interact...");
+                boolean interactionResult = nodeObject.interact("Light");
+                if (interactionResult) {
+                    log.info("Node successfully lit.");
+                    Execution.delay(3000, 8000); // Ensure interaction completes
+
+                    log.info("Verifying new area accessibility...");
+                    if (newAreaIsAccessible()) {
+                        log.info("New area is accessible.");
                         return true;
                     } else {
-                        log.warn("Interaction with light node failed.");
+                        log.warn("New area is not accessible.");
                     }
                 } else {
-                    log.warn("The 'Light' action is not available on this node.");
+                    log.warn("Interaction with light node failed.");
                 }
             } else {
-                log.warn("Node definition is null.");
+                log.warn("No lightable nodes found.");
             }
         } else {
-            log.warn("No nodes found in specified area: " + areaAroundNodes);
+            log.warn("No barriers found.");
         }
         return false;
     }
 
-
-
-
-    public static Area.Rectangular nodeAreaAround(Coordinate[] nodes, String direction) {
-        Coordinate bottomLeft, topRight;
-
-        if ("eastWest".equalsIgnoreCase(direction)) {
-            // East-West rectangle (North to South)
-            bottomLeft = new Coordinate(nodes[0].getX() - 1, nodes[0].getY() - 2, nodes[0].getPlane());
-            topRight = new Coordinate(nodes[1].getX() + 1, nodes[1].getY() + 2, nodes[1].getPlane());
-        } else {
-            // North-South rectangle (East to West)
-            bottomLeft = new Coordinate(nodes[0].getX() - 2, nodes[0].getY() - 1, nodes[0].getPlane());
-            topRight = new Coordinate(nodes[1].getX() + 2, nodes[1].getY() + 1, nodes[1].getPlane());
-        }
-
-        log.info("Defined rectangular area with coordinates: " + bottomLeft + ", " + topRight);
-        return new Area.Rectangular(bottomLeft, topRight);
+    public static boolean newAreaIsAccessible() {
+        // Logic to confirm new area opens up
+        GameObject newAreaObject = GameObjects.newQuery().names("New Area Object").results().first();
+        return newAreaObject != null;
     }
-
-
-
-
-
-
 
 
     public static Npc getBoss(BossType bossType) {
@@ -469,4 +494,5 @@ public class DungeonUtils {
         return Inventory.getQuantity() >= maxInventorySize;
     }
 }
+
 
