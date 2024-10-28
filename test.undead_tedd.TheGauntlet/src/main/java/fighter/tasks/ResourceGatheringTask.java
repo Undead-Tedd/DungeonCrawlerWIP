@@ -1,5 +1,6 @@
 package fighter.tasks;
 
+import com.runemate.game.api.hybrid.local.hud.interfaces.SpriteItem;
 import com.runemate.game.api.script.Execution;
 import com.runemate.game.api.script.framework.tree.LeafTask;
 import com.runemate.game.api.hybrid.entities.GameObject;
@@ -9,6 +10,8 @@ import fighter.DungeonCrawler;
 import fighter.DungeonUtils;
 import fighter.tasks.tracking.ResourceTracker;
 import lombok.extern.log4j.Log4j2;
+
+import java.util.Objects;
 
 @Log4j2(topic = "ResourceGatheringTask")
 public class ResourceGatheringTask extends LeafTask {
@@ -28,12 +31,12 @@ public class ResourceGatheringTask extends LeafTask {
         // Find a resource node based on needed resources
         GameObject resourceNode = DungeonUtils.getNeededResourceNode();
         if (resourceNode != null) {
-            String resourceName = resourceNode.getDefinition().getName();
+            String resourceName = Objects.requireNonNull(resourceNode.getDefinition()).getName();
             log.info("Found needed resource node: " + resourceName);
             bot.updateTaskStatus("Gathering resource: " + resourceName);
             if (resourceNode.interact("Gather")) {
                 Execution.delay(1000, 2000); // Wait for gathering action to complete
-                tracker.trackResource(resourceName); // Track the gathered resource
+                tracker.incrementResourceCount(resourceName); // Increment the gathered resource count
                 Execution.delay(500); // Small delay between actions
             }
         } else {
@@ -47,7 +50,7 @@ public class ResourceGatheringTask extends LeafTask {
             handleFullInventory();
         }
 
-        // Handle tool management (drop unnecessary tools)
+        // Manage tools based on gathered resources
         manageTools();
 
         // Collect any loot that is still needed from the ground
@@ -58,18 +61,17 @@ public class ResourceGatheringTask extends LeafTask {
      * Manage tools by dropping unnecessary ones once all resources are gathered.
      */
     private void manageTools() {
-        // Example logic: Drop tools that are no longer needed
-        if (tracker.hasGatheredAll("Pickaxe") && Inventory.contains("Pickaxe")) {
+        if (tracker.isResourceFullyGathered("Crystal Ore") && Inventory.contains("Pickaxe")) {
             log.info("Dropping Pickaxe as all ores have been gathered.");
-            Inventory.getItems("Pickaxe").first().interact("Drop");
+            Objects.requireNonNull(Inventory.getItems("Pickaxe").first()).interact("Drop");
         }
-        if (tracker.hasGatheredAll("Hatchet") && Inventory.contains("Hatchet")) {
+        if (tracker.isResourceFullyGathered("Phren Bark") && Inventory.contains("Hatchet")) {
             log.info("Dropping Hatchet as all wood resources have been gathered.");
-            Inventory.getItems("Hatchet").first().interact("Drop");
+            Objects.requireNonNull(Inventory.getItems("Hatchet").first()).interact("Drop");
         }
-        if (tracker.hasGatheredAll("Hammer") && Inventory.contains("Hammer")) {
-            log.info("Dropping Hammer as all bars have been crafted.");
-            Inventory.getItems("Hammer").first().interact("Drop");
+        if (tracker.isResourceFullyGathered("Linum Tirinium") && Inventory.contains("Hammer")) {
+            log.info("Dropping Hammer as all crafting bars have been used.");
+            Objects.requireNonNull(Inventory.getItems("Hammer").first()).interact("Drop");
         }
     }
 
@@ -77,19 +79,25 @@ public class ResourceGatheringTask extends LeafTask {
      * Handle full inventory by dropping unneeded items or teleporting back to the spawn.
      */
     private void handleFullInventory() {
-        // Drop unnecessary items first
-        Inventory.getItems().forEach(item -> {
-            log.info("Dropping unnecessary item from the inventory: " + item.getDefinition().getName());
-            item.interact("Drop");
-        });
+        int paddlefishToDrop = Math.min(3, Inventory.getQuantity("Raw Paddlefish"));
+        int itemsDropped = 0;
 
-        // If still full, teleport back to the starting room to bank/craft
+        // Drop 1–3 raw paddlefish if available and needed for gathering space
+        for (SpriteItem paddlefish : Inventory.getItems("Raw Paddlefish")) {
+            if (itemsDropped >= paddlefishToDrop) break; // Limit drops to 1–3
+            log.info("Dropping raw paddlefish to make space for gathering.");
+            paddlefish.interact("Drop");
+            Execution.delay(300, 500); // Small delay between drops
+            itemsDropped++;
+        }
+
+        // After dropping paddlefish, check if inventory is still full
         if (Inventory.isFull()) {
             if (DungeonUtils.hasTeleportCrystal()) {
-                log.info("Teleporting back to spawn using Teleport Crystal.");
+                log.info("Teleporting back to spawn using Teleport Crystal due to full inventory.");
                 DungeonUtils.teleportBackToSpawn();
             } else {
-                log.warn("Inventory full and no Teleport Crystal available.");
+                log.warn("Inventory is full and no Teleport Crystal is available.");
                 bot.updateTaskStatus("Inventory full, no teleport crystal. Stopping task.");
             }
         }
@@ -100,10 +108,15 @@ public class ResourceGatheringTask extends LeafTask {
      */
     private void collectNeededLoot() {
         GroundItems.newQuery().results().forEach(item -> {
-            if (DungeonUtils.isNeededLoot(item.getDefinition().getName())) {
-                log.info("Looting needed item: " + item.getDefinition().getName());
-                item.interact("Take");
-                Execution.delay(500, 1000); // Delay for looting action
+            String itemName = Objects.requireNonNull(item.getDefinition()).getName();
+            if (ResourceTracker.isNeededResource(itemName) || DungeonUtils.isHighPriorityLoot(itemName)) {
+                log.info("Looting needed item: " + itemName);
+                if (item.interact("Take")) {
+                    Execution.delay(500, 1000); // Delay for looting action
+                    tracker.incrementResourceCount(itemName); // Update tracker
+                }
+            } else {
+                log.info("Skipping unnecessary loot: " + itemName);
             }
         });
     }

@@ -10,7 +10,7 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2(topic = "PostBossManagementTask")
 public class PostBossManagementTask extends LeafTask {
 
-    private DungeonCrawler bot;
+    private final DungeonCrawler bot;
     private static final String REWARD_CHEST = "Reward Chest";
     private static final String BANK_DEPOSIT_BOX = "Bank Deposit Box";
     private static final int MAX_INVENTORY_THRESHOLD = 20; // Number of free spaces needed to avoid depositing
@@ -28,7 +28,7 @@ public class PostBossManagementTask extends LeafTask {
         if (lootRewardChest()) {
             // Reset resource tracking after looting the chest
             log.info("Resetting resource tracker for the new run...");
-            bot.getResourceTracker().reset(); // Reset the resources for the new run
+            bot.getResourceTracker().resetForNewRun(); // Reset the resources for the new run
 
             // Step 2: Check if there are more than 20 free spaces after looting
             int freeSpaces = 28 - Inventory.getQuantity();
@@ -65,7 +65,7 @@ public class PostBossManagementTask extends LeafTask {
         var depositBox = GameObjects.newQuery().names(BANK_DEPOSIT_BOX).results().first();
         if (depositBox != null && depositBox.interact("Deposit")) {
             log.info("Depositing items into the bank deposit box...");
-            Execution.delayUntil(() -> Inventory.isEmpty(), 5000, 10000); // Wait until items are deposited
+            Execution.delayUntil(Inventory::isEmpty, 5000, 10000); // Wait until items are deposited
             log.info("Items deposited successfully.");
         } else {
             log.warn("Bank deposit box not found.");
