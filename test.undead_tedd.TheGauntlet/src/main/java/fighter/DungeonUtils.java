@@ -1,13 +1,12 @@
 package fighter;
 
+import java.util.HashMap;
 import java.util.List;
 import com.runemate.game.api.hybrid.entities.GameObject;
 import com.runemate.game.api.hybrid.entities.GroundItem;
 import com.runemate.game.api.hybrid.entities.Npc;
 import com.runemate.game.api.hybrid.input.Keyboard;
-import com.runemate.game.api.hybrid.local.Camera;
 import com.runemate.game.api.hybrid.local.hud.interfaces.*;
-import com.runemate.game.api.hybrid.location.Area;
 import com.runemate.game.api.hybrid.location.Coordinate;
 import com.runemate.game.api.hybrid.region.GameObjects;
 import com.runemate.game.api.hybrid.region.GroundItems;
@@ -41,16 +40,15 @@ public class DungeonUtils {
     public static final Coordinate[] corruptedSouthDoorNodes = {new Coordinate(1977, 5665, 1), new Coordinate(1974, 5665, 1)};
     public static final Coordinate[] corruptedWestDoorNodes = {new Coordinate(1969, 5670, 1), new Coordinate(1969, 5673, 1)};
 
-    // Rectangular areas for normal and corrupted mode
-    private static final Area.Rectangular northDoorArea = Area.rectangular(northDoorNodes[0], northDoorNodes[1]);
-    private static final Area.Rectangular eastDoorArea = Area.rectangular(eastDoorNodes[0], eastDoorNodes[1]);
-    private static final Area.Rectangular southDoorArea = Area.rectangular(southDoorNodes[0], southDoorNodes[1]);
-    private static final Area.Rectangular westDoorArea = Area.rectangular(westDoorNodes[0], westDoorNodes[1]);
+    private static Coordinate currentRoomLocation;
 
-    private static final Area.Rectangular corruptedNorthDoorArea = Area.rectangular(corruptedNorthDoorNodes[0], corruptedNorthDoorNodes[1]);
-    private static final Area.Rectangular corruptedEastDoorArea = Area.rectangular(corruptedEastDoorNodes[0], corruptedEastDoorNodes[1]);
-    private static final Area.Rectangular corruptedSouthDoorArea = Area.rectangular(corruptedSouthDoorNodes[0], corruptedSouthDoorNodes[1]);
-    private static final Area.Rectangular corruptedWestDoorArea = Area.rectangular(corruptedWestDoorNodes[0], corruptedWestDoorNodes[1]);
+    public static void updateRoomLocation(Coordinate newLocation) {
+        currentRoomLocation = newLocation;
+    }
+
+    public static Coordinate getRoomLocation() {
+        return currentRoomLocation;
+    }
 
 
     private static final long FLICK_DELAY = 600; // Flick every 600ms
@@ -105,6 +103,7 @@ public class DungeonUtils {
             return false;
         }
     }
+
 
 
     // Method to check if we need to heal
@@ -265,11 +264,11 @@ public class DungeonUtils {
     }
 
     // Weak monsters include both Crystalline and Corrupted variants
-    private static final List<String> WEAK_MONSTER_NAMES = List.of("Crystalline Rat", "Crystalline Spider", "Crystalline Bat",
+    public static final List<String> WEAK_MONSTER_NAMES = List.of("Crystalline Rat", "Crystalline Spider", "Crystalline Bat",
             "Corrupted Rat", "Corrupted Spider", "Corrupted Bat");
 
     // Demi-bosses include both Crystalline and Corrupted variants
-    private static final List<String> DEMI_BOSS_NAMES = List.of("Crystalline Dragon", "Crystalline Dark Beast",
+    public static final List<String> DEMI_BOSS_NAMES = List.of("Crystalline Dragon", "Crystalline Dark Beast",
             "Corrupted Dragon", "Corrupted Dark Beast");
 
     // Bosses include both Crystal and Corrupted variants of the main boss
@@ -391,68 +390,27 @@ public class DungeonUtils {
         return null; // Return null if all resources are gathered or no node is found
     }
 
-    public static boolean lightNodeAtDoorway(DungeonCrawler bot) {
-        log.info("Querying for barriers...");
-        GameObject barrierObject = GameObjects.newQuery().names("Barrier").results().first();
-        if (barrierObject != null) {
-            log.info("Found barrier at position: {}", barrierObject.getPosition());
-            Coordinate barrierPosition = barrierObject.getPosition();
+    public static boolean newAreaIsAccessible(Coordinate roomLocation) {
+        // A HashMap to track scanned rooms, with room coordinates as keys and their state as values
+        HashMap<Coordinate, Boolean> scannedRooms = new HashMap<>();
 
-            // Determine which set of nodes to use based on the UI setting
-            boolean isCorrupted = bot.isEnterCorrupted(); // Use the bot's UI setting
-            log.info("Is Corrupted Mode: {}", isCorrupted);
-
-            // Fixed coordinates for barrier detection
-            Coordinate northBarrierCoord1 = new Coordinate(1905, 5688, 1);
-            Coordinate northBarrierCoord2 = new Coordinate(1905, 5687, 1);
-
-            Coordinate[] northNodes = isCorrupted ? DungeonUtils.corruptedNorthDoorNodes : DungeonUtils.northDoorNodes;
-            Coordinate[] southNodes = isCorrupted ? DungeonUtils.corruptedSouthDoorNodes : DungeonUtils.southDoorNodes;
-
-            // Check against fixed barrier coordinates and turn the camera accordingly
-            assert barrierPosition != null;
-            if (barrierPosition.equals(northBarrierCoord1) || barrierPosition.equals(northBarrierCoord2)) {
-                log.info("Barrier found at the north position. Turning camera south...");
-                Camera.turnTo(southNodes[0]); // South side
-            } else {
-                log.warn("Barrier position did not match fixed coordinates. Position: {}", barrierPosition);
-            }
-
-            // Interact with the node after turning the camera
-            GameObject nodeObject = GameObjects.newQuery().names("Node").actions("Light").results().first();
-            if (nodeObject != null) {
-                log.info("Found lightable node at position: " + nodeObject.getPosition() + ". Attempting to interact...");
-                boolean interactionResult = nodeObject.interact("Light");
-                if (interactionResult) {
-                    log.info("Node successfully lit.");
-                    Execution.delay(3000, 8000); // Ensure interaction completes
-
-                    log.info("Verifying new area accessibility...");
-                    if (newAreaIsAccessible()) {
-                        log.info("New area is accessible.");
-                        return true;
-                    } else {
-                        log.warn("New area is not accessible.");
-                    }
-                } else {
-                    log.warn("Interaction with light node failed.");
-                }
-            } else {
-                log.warn("No lightable nodes found.");
-            }
-        } else {
-            log.warn("No barriers found.");
+        // Check if this room has already been scanned and marked accessible
+        if (scannedRooms.containsKey(roomLocation) && scannedRooms.get(roomLocation)) {
+            log.info("Adding roomLocation to scannedRooms: " + roomLocation);
+            return true; // Skip if already marked as accessible
         }
-        return false;
+
+        // Check for the "Illuminated Symbol" object to confirm new area activation
+        GameObject illuminatedSymbol = GameObjects.newQuery().names("Illuminated Symbol").results().first();
+
+        if (illuminatedSymbol != null) {
+            // Mark the room as accessible in the HashMap
+            scannedRooms.put(roomLocation, true);
+            return true;
+        } else {
+            return false;
+        }
     }
-
-    public static boolean newAreaIsAccessible() {
-        // Logic to confirm new area opens up
-        GameObject newAreaObject = GameObjects.newQuery().names("New Area Object").results().first();
-        return newAreaObject != null;
-    }
-
-
 
 
     public static Npc getBoss(BossType bossType) {
@@ -461,12 +419,12 @@ public class DungeonUtils {
     }
 
     // Crafting area coordinates for Crystalline variant
-    private static final Coordinate CRYSTALLINE_CRAFTING_NW = new Coordinate(1906, 5677, 1);
-    private static final Coordinate CRYSTALLINE_CRAFTING_SE = new Coordinate(1917, 5666, 1);
+    public static final Coordinate CRYSTALLINE_CRAFTING_NW = new Coordinate(1906, 5677, 1);
+    public static final Coordinate CRYSTALLINE_CRAFTING_SE = new Coordinate(1917, 5666, 1);
 
     // Crafting area coordinates for Corrupted variant
-    private static final Coordinate CORRUPTED_CRAFTING_NW = new Coordinate(1970, 5677, 1);
-    private static final Coordinate CORRUPTED_CRAFTING_SE = new Coordinate(1981, 5666, 1);
+    public static final Coordinate CORRUPTED_CRAFTING_NW = new Coordinate(1970, 5677, 1);
+    public static final Coordinate CORRUPTED_CRAFTING_SE = new Coordinate(1981, 5666, 1);
 
     public static boolean isInCraftingArea(BossType bossType) {
         Coordinate playerPosition = Objects.requireNonNull(Players.getLocal()).getPosition();
@@ -482,7 +440,7 @@ public class DungeonUtils {
     }
 
 
-    private static boolean isWithinArea(Coordinate position, Coordinate northwest, Coordinate southeast) {
+    public static boolean isWithinArea(Coordinate position, Coordinate northwest, Coordinate southeast) {
         return position.getX() >= northwest.getX() && position.getX() <= southeast.getX()
                 && position.getY() >= southeast.getY() && position.getY() <= northwest.getY()
                 && position.getPlane() == northwest.getPlane();

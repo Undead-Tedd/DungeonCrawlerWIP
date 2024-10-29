@@ -1,5 +1,6 @@
 package fighter.tasks.tracking;
 
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
@@ -115,6 +116,7 @@ public class ResourceTracker {
     private boolean crystalHelmCrafted;
 
     // Current crafting phase
+    @Getter
     private int craftingPhase = 1;
 
     // Method to check if ready for crafting phase 1 or 2
@@ -174,6 +176,7 @@ public class ResourceTracker {
             default -> false;
         };
     }
+
     public boolean isResourceFullyGathered(String resourceName) {
         return switch (resourceName) {
             case "Raw Paddlefish" -> getPaddlefishCount() >= 23;
@@ -369,24 +372,77 @@ public class ResourceTracker {
 
 
     // Getters for all resource types
-    public synchronized int getPaddlefishCount() { return paddlefishCount; }
-    public synchronized int getCrystalOre() { return crystalOre; }
-    public synchronized int getPhrenBark() { return phrenBark; }
-    public synchronized int getLinumTirinium() { return linumTirinium; }
-    public synchronized int getCorruptedShards() { return corruptedShards; }
-    public synchronized int getCrystallineShards() { return crystallineShards; }
-    public synchronized int getGrymLeaf() { return grymLeaf; }
-    public synchronized int getVialCount() { return vialCount; }
-    public synchronized int getWaterFilledVial() { return waterFilledVial; }
-    public synchronized int getWeaponFrameCount() { return weaponFrameCount; }
-    public synchronized int getCorruptedOrbCount() { return corruptedOrbCount; }
-    public synchronized int getCrystallineOrbCount() { return crystallineOrbCount; }
-    public synchronized int getCorruptedBowstringCount() { return corruptedBowstringCount; }
-    public synchronized int getCrystallineBowstringCount() { return crystallineBowstringCount; }
-    public synchronized int getCorruptedDustCount() { return corruptedDustCount; }
-    public synchronized int getCrystallineDustCount() { return crystallineDustCount; }
-    public synchronized int getPotionCount() { return PotionCount; }
-    public synchronized int getCorruptedOre() { return corruptedOre; }
+    public synchronized int getPaddlefishCount() {
+        return paddlefishCount;
+    }
+
+    public synchronized int getCrystalOre() {
+        return crystalOre;
+    }
+
+    public synchronized int getPhrenBark() {
+        return phrenBark;
+    }
+
+    public synchronized int getLinumTirinium() {
+        return linumTirinium;
+    }
+
+    public synchronized int getCorruptedShards() {
+        return corruptedShards;
+    }
+
+    public synchronized int getCrystallineShards() {
+        return crystallineShards;
+    }
+
+    public synchronized int getGrymLeaf() {
+        return grymLeaf;
+    }
+
+    public synchronized int getVialCount() {
+        return vialCount;
+    }
+
+    public synchronized int getWaterFilledVial() {
+        return waterFilledVial;
+    }
+
+    public synchronized int getWeaponFrameCount() {
+        return weaponFrameCount;
+    }
+
+    public synchronized int getCorruptedOrbCount() {
+        return corruptedOrbCount;
+    }
+
+    public synchronized int getCrystallineOrbCount() {
+        return crystallineOrbCount;
+    }
+
+    public synchronized int getCorruptedBowstringCount() {
+        return corruptedBowstringCount;
+    }
+
+    public synchronized int getCrystallineBowstringCount() {
+        return crystallineBowstringCount;
+    }
+
+    public synchronized int getCorruptedDustCount() {
+        return corruptedDustCount;
+    }
+
+    public synchronized int getCrystallineDustCount() {
+        return crystallineDustCount;
+    }
+
+    public synchronized int getPotionCount() {
+        return PotionCount;
+    }
+
+    public synchronized int getCorruptedOre() {
+        return corruptedOre;
+    }
 
     public boolean isBowCrafted(String tier) {
         return switch (tier.toLowerCase()) {
@@ -405,5 +461,5 @@ public class ResourceTracker {
             default -> false;
         };
     }
-
 }
+
